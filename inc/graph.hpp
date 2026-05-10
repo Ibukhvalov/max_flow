@@ -9,13 +9,9 @@
 #include <limits>
 #include <queue>
 #include <vector>
+#include <optional>
 
 
-struct Edge {
-    size_t to;
-    size_t reverse_index;
-    size_t capacity;
-};
 
 class FlowGraph {
 public:
@@ -35,7 +31,7 @@ public:
                     line >> problem_type >> nodes >> arcs;
                     assert(problem_type == std::string("max"));
                     std::cout << "Nodes: " << nodes << '\t' << ", Arcs: " << arcs << std::endl;
-                    graph.set_node_count(nodes);
+                    graph.adjacency.resize(nodes+1);
                     break;
                 }
                 case 'c':
@@ -65,8 +61,6 @@ public:
     }
     size_t FindMaxFlow() {
         assert(adjacency.size() > 1);
-        assert(is_valid_node(source));
-        assert(is_valid_node(sink));
         assert(source != sink);
 
         size_t max_flow = 0;
@@ -80,6 +74,12 @@ public:
         return max_flow;
     }
 private:
+    struct Edge {
+        size_t to;
+        size_t reverse_index;
+        size_t capacity;
+    };
+
     struct PathStep {
         size_t previous = 0;
         size_t edge_index = 0;
@@ -93,14 +93,6 @@ private:
     size_t sink = 0;
     std::vector<std::vector<Edge>> adjacency;
 
-    void set_node_count(size_t node_count) {
-        adjacency.assign(node_count + 1, std::vector<Edge>{});
-    }
-
-    bool is_valid_node(size_t node) const {
-        return node != 0 && node < adjacency.size();
-    }
-
     void add_arc(size_t from, size_t to, long long capacity) {
         if (capacity == 0) {
             return;
@@ -111,8 +103,6 @@ private:
             capacity = -capacity;
         }
 
-        assert(is_valid_node(from));
-        assert(is_valid_node(to));
         if (from == to) {
             return;
         }
@@ -120,8 +110,8 @@ private:
         const size_t forward_index = adjacency[from].size();
         const size_t reverse_index = adjacency[to].size();
 
-        adjacency[from].push_back({to, reverse_index, static_cast<size_t>(capacity)});
-        adjacency[to].push_back({from, forward_index, 0});
+        adjacency[from].emplace_back(to, reverse_index, static_cast<size_t>(capacity));
+        adjacency[to].emplace_back(from, forward_index, 0);
     }
 
     std::optional<std::vector<PathStep>> find_augmenting_path() const {
